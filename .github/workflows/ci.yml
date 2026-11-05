@@ -1,0 +1,40 @@
+# Node.js + Python CI — runs tests on push and pull request.
+# Each job skips itself when its manifest file is missing.
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: detect
+        run: |
+          if [ -f package.json ]; then echo "found=true" >> "$GITHUB_OUTPUT"; fi
+      - if: steps.detect.outputs.found == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - if: steps.detect.outputs.found == 'true'
+        run: npm ci && npm test --if-present
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: detect
+        run: |
+          if [ -f requirements.txt ]; then echo "found=true" >> "$GITHUB_OUTPUT"; fi
+      - if: steps.detect.outputs.found == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - if: steps.detect.outputs.found == 'true'
+        run: |
+          pip install -r requirements.txt pytest
+          pytest -q
